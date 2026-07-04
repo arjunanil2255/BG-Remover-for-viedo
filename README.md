@@ -1,6 +1,6 @@
 <div align="center">
 
-# BG_Remover 🎬
+# BG_Remover 
 
 **AI-Powered Video Background Removal Tool**
 
