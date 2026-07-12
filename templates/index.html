@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BG Remover — AI Video Background Removal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a26;--bg4:#22222f;
+  --accent:#7c5cfc;--accent2:#a78bfa;--accent-glow:rgba(124,92,252,.25);
+  --green:#22c55e;--red:#ef4444;--yellow:#eab308;
+  --text:#e8e8ed;--text2:#9999aa;--text3:#666677;
+  --border:#2a2a3a;--radius:14px;--radius-sm:8px;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;line-height:1.5}
+
+/* Animated background */
+body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(124,92,252,.06) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(34,197,94,.04) 0%,transparent 50%);animation:bgPulse 20s ease-in-out infinite;z-index:-1}
+@keyframes bgPulse{0%,100%{transform:translate(0,0)}50%{transform:translate(-3%,2%)}}
+
+.container{max-width:880px;margin:0 auto;padding:40px 24px 80px}
+
+/* Header */
+.header{text-align:center;margin-bottom:48px}
+.header h1{font-size:2.8rem;font-weight:900;letter-spacing:-.03em;background:linear-gradient(135deg,var(--accent2),var(--accent),#e879f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text2);font-size:1.05rem;margin-top:8px;font-weight:400}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin-bottom:24px;transition:border-color .3s}
+.card:hover{border-color:#3a3a4f}
+.card-title{font-size:1.15rem;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.card-title .icon{font-size:1.3rem}
+
+/* Upload Zone */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:60px 32px;text-align:center;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.upload-zone::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(124,92,252,.03),rgba(34,197,94,.03));opacity:0;transition:opacity .3s}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(124,92,252,.05)}
+.upload-zone:hover::before,.upload-zone.drag-over::before{opacity:1}
+.upload-zone.drag-over{transform:scale(1.01);box-shadow:0 0 40px var(--accent-glow)}
+.upload-icon{font-size:3rem;margin-bottom:16px;display:block}
+.upload-text{font-size:1.1rem;font-weight:600;color:var(--text)}
+.upload-sub{color:var(--text3);font-size:.85rem;margin-top:6px}
+.upload-formats{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.upload-formats span{background:var(--bg4);color:var(--text2);padding:4px 10px;border-radius:20px;font-size:.72rem;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+#file-input{display:none}
+
+/* Video Preview */
+.preview-area{position:relative;border-radius:var(--radius-sm);overflow:hidden;background:#000;margin-top:16px;display:none}
+.preview-area video{width:100%;max-height:360px;display:block;border-radius:var(--radius-sm);object-fit:contain}
+.file-info{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-radius:var(--radius-sm);margin-top:12px}
+.file-info .name{font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.file-info .meta{color:var(--text2);font-size:.8rem;display:flex;gap:12px}
+.file-info .meta span{white-space:nowrap}
+.remove-btn{background:none;border:1px solid var(--red);color:var(--red);padding:5px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:.8rem;font-weight:600;transition:all .2s}
+.remove-btn:hover{background:var(--red);color:#fff}
+
+/* Settings Grid */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:600px){.settings-grid{grid-template-columns:1fr}}
+.field label{display:block;font-size:.78rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.field select,.field input[type="number"],.field input[type="text"]{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:.9rem;font-family:inherit;transition:border-color .2s;outline:none}
+.field select:focus,.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.field select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239999aa' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);margin-top:4px}
+.toggle-row:first-child{border-top:none}
+.toggle-label{font-size:.88rem;font-weight:500}
+.toggle-desc{font-size:.75rem;color:var(--text3);margin-top:2px}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;inset:0;background:var(--bg4);border-radius:24px;cursor:pointer;transition:.3s}
+.toggle .slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle input:checked+.slider{background:var(--accent)}
+.toggle input:checked+.slider::before{transform:translateX(20px)}
+
+/* BG Presets */
+.bg-presets{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.bg-preset{padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .2s}
+.bg-preset:hover{border-color:var(--accent);color:var(--text)}
+.bg-preset.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* Process Button */
+.process-btn{width:100%;padding:16px;border:none;border-radius:var(--radius);background:linear-gradient(135deg,var(--accent),#9b6dff);color:#fff;font-size:1.05rem;font-weight:700;cursor:pointer;transition:all .3s;font-family:inherit;letter-spacing:-.01em;position:relative;overflow:hidden}
+.process-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#9b6dff,var(--accent));opacity:0;transition:opacity .3s}
+.process-btn:hover::before{opacity:1}
+.process-btn:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(124,92,252,.3)}
+.process-btn:active{transform:translateY(0)}
+.process-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.process-btn span{position:relative;z-index:1}
+
+/* Progress */
+.progress-area{display:none}
+.progress-bar-wrap{background:var(--bg4);border-radius:20px;height:8px;overflow:hidden;margin:16px 0}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),#e879f9,var(--accent));background-size:200% 100%;border-radius:20px;transition:width .4s ease;width:0%;animation:shimmer 2s ease-in-out infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.progress-status{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.progress-status .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.progress-message{font-size:.9rem;color:var(--text2)}
+.progress-percent{font-size:.85rem;color:var(--accent2);font-weight:700;margin-left:auto}
+
+/* Result */
+.result-area{display:none;text-align:center}
+.result-icon{font-size:4rem;margin-bottom:12px;display:block}
+.result-title{font-size:1.4rem;font-weight:800;color:var(--green);margin-bottom:6px}
+.result-sub{color:var(--text2);font-size:.9rem;margin-bottom:24px}
+.download-btn{display:inline-flex;align-items:center;gap:8px;padding:14px 36px;border-radius:var(--radius);background:linear-gradient(135deg,var(--green),#16a34a);color:#fff;font-size:1rem;font-weight:700;text-decoration:none;transition:all .3s;cursor:pointer;border:none;font-family:inherit}
+.download-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(34,197,94,.3)}
+.new-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 24px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:.88rem;font-weight:600;cursor:pointer;margin-left:12px;transition:all .2s;font-family:inherit}
+.new-btn:hover{border-color:var(--accent);color:var(--text)}
+
+/* Error */
+.error-area{display:none;text-align:center;padding:24px}
+.error-area .icon{font-size:3rem;margin-bottom:10px;display:block}
+.error-area .msg{color:var(--red);font-size:1rem;font-weight:600;margin-bottom:16px}
+
+/* Hidden helper */
+.hidden{display:none!important}
+
+/* Model description tooltip */
+.model-desc{font-size:.75rem;color:var(--text3);margin-top:6px;font-style:italic;min-height:1.2em}
+
+/* Responsive */
+@media(max-width:600px){
+  .container{padding:24px 16px 60px}
+  .header h1{font-size:2rem}
+  .card{padding:24px}
+  .upload-zone{padding:40px 20px}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <h1>BG Remover</h1>
+    <p>AI-powered video background removal — runs 100% locally on your machine</p>
+  </div>
+
+  <!-- Step 1: Upload -->
+  <div class="card" id="step-upload">
+    <div class="card-title"><span class="icon">&#127909;</span> Upload Video</div>
+    <div class="upload-zone" id="drop-zone">
+      <span class="upload-icon">&#9651;</span>
+      <div class="upload-text">Drag & drop your video here</div>
+      <div class="upload-sub">or click to browse files</div>
+      <div class="upload-formats">
+        <span>MP4</span><span>MOV</span><span>AVI</span><span>MKV</span><span>WEBM</span>
+      </div>
+      <input type="file" id="file-input" accept="video/*">
+    </div>
+
+    <div class="preview-area" id="preview-area">
+      <video id="preview-video" controls></video>
+      <div class="file-info">
+        <span class="name" id="file-name"></span>
+        <span class="meta">
+          <span id="file-resolution"></span>
+          <span id="file-fps"></span>
+          <span id="file-frames"></span>
+        </span>
+        <button class="remove-btn" id="remove-btn">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Settings -->
+  <div class="card hidden" id="step-settings">
+    <div class="card-title"><span class="icon">&#9881;</span> Settings</div>
+
+    <div class="settings-grid">
+      <!-- Model -->
+      <div class="field">
+        <label for="model-select">AI Model</label>
+        <select id="model-select">
+          {% for name, desc in models.items() %}
+          <option value="{{ name }}" {% if name == 'u2net_human_seg' %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+        <div class="model-desc" id="model-desc">{{ models.get('u2net_human_seg', '') }}</div>
+      </div>
+
+      <!-- Skip Frames -->
+      <div class="field">
+        <label for="skip-frames">Frame Skip</label>
+        <select id="skip-frames">
+          <option value="0">All frames (best quality)</option>
+          <option value="1">Every 2nd frame (2x faster)</option>
+          <option value="2">Every 3rd frame (3x faster)</option>
+          <option value="3">Every 4th frame (4x faster)</option>
+        </select>
+      </div>
+
+      <!-- Erode -->
+      <div class="field">
+        <label for="erode">Edge Erosion (px)</label>
+        <input type="number" id="erode" value="0" min="0" max="10" step="1">
+      </div>
+
+      <!-- Feather -->
+      <div class="field">
+        <label for="feather">Edge Feather (px)</label>
+        <input type="number" id="feather" value="2" min="0" max="20" step="1">
+      </div>
+    </div>
+
+    <!-- Background -->
+    <div style="margin-top:20px">
+      <label style="display:block;font-size:.78rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Background</label>
+      <div class="bg-presets" id="bg-presets">
+        <button class="bg-preset active" data-bg="">Black</button>
+        <button class="bg-preset" data-bg="green">Green Screen</button>
+        <button class="bg-preset" data-bg="white">White</button>
+        <button class="bg-preset" data-bg="custom">Custom Image...</button>
+      </div>
+      <input type="file" id="bg-file" accept="image/*" style="display:none">
+      <div id="bg-custom-name" style="font-size:.8rem;color:var(--text2);margin-top:8px;display:none"></div>
+    </div>
+
+    <!-- Toggles -->
+    <div style="margin-top:20px">
+      <div class="toggle-row">
+        <div><div class="toggle-label">Alpha Matting</div><div class="toggle-desc">More precise edges, slightly slower</div></div>
+        <label class="toggle"><input type="checkbox" id="alpha-matting" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Transparent Output</div><div class="toggle-desc">Export with alpha channel (.webm)</div></div>
+        <label class="toggle"><input type="checkbox" id="transparent"><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <!-- Process -->
+    <button class="process-btn" id="process-btn" style="margin-top:28px">
+      <span>&#9654; Remove Background</span>
+    </button>
+  </div>
+
+  <!-- Step 3: Processing -->
+  <div class="card hidden" id="step-processing">
+    <div class="card-title"><span class="icon">&#9881;</span> Processing</div>
+    <div class="progress-area" id="progress-area" style="display:block">
+      <div class="progress-status">
+        <span class="dot"></span>
+        <span class="progress-message" id="progress-message">Initializing...</span>
+        <span class="progress-percent" id="progress-percent">0%</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Result -->
+  <div class="card hidden" id="step-result">
+    <div class="result-area" id="result-area" style="display:block">
+      <span class="result-icon">&#10003;</span>
+      <div class="result-title">Done!</div>
+      <div class="result-sub">Your video has been processed successfully.</div>
+      <a class="download-btn" id="download-btn">&#11015; Download Video</a>
+      <button class="new-btn" id="new-btn">&#8634; Process Another</button>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="card hidden" id="step-error">
+    <div class="error-area" style="display:block">
+      <span class="icon">&#9888;</span>
+      <div class="msg" id="error-message">Something went wrong.</div>
+      <button class="new-btn" id="retry-btn">&#8634; Try Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const MODELS = {{ models | tojson }};
+  let jobId = null;
+  let selectedBg = null;
+  let bgFile = null;
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+
+  // Elements
+  const dropZone = $('#drop-zone');
+  const fileInput = $('#file-input');
+  const previewArea = $('#preview-area');
+  const previewVideo = $('#preview-video');
+  const stepUpload = $('#step-upload');
+  const stepSettings = $('#step-settings');
+  const stepProcessing = $('#step-processing');
+  const stepResult = $('#step-result');
+  const stepError = $('#step-error');
+  const processBtn = $('#process-btn');
+  const progressBar = $('#progress-bar');
+  const progressMessage = $('#progress-message');
+  const progressPercent = $('#progress-percent');
+  const modelSelect = $('#model-select');
+  const modelDesc = $('#model-desc');
+  const bgPresets = $('#bg-presets');
+  const bgFileInput = $('#bg-file');
+  const bgCustomName = $('#bg-custom-name');
+
+  // Model description
+  modelSelect.addEventListener('change', () => {
+    modelDesc.textContent = MODELS[modelSelect.value] || '';
+  });
+
+  // Drag & drop
+  ['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('drag-over'); }));
+  ['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('drag-over'); }));
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('drop', ev => { const f = ev.dataTransfer.files[0]; if(f) handleFile(f); });
+  fileInput.addEventListener('change', () => { if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+  // Background presets
+  bgPresets.addEventListener('click', ev => {
+    const btn = ev.target.closest('.bg-preset');
+    if(!btn) return;
+    $$('.bg-preset').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const bg = btn.dataset.bg;
+    if(bg === 'custom'){
+      bgFileInput.click();
+    } else {
+      selectedBg = bg || null;
+      bgFile = null;
+      bgCustomName.style.display = 'none';
+    }
+  });
+  bgFileInput.addEventListener('change', () => {
+    if(bgFileInput.files[0]){
+      bgFile = bgFileInput.files[0];
+      selectedBg = null;
+      bgCustomName.textContent = bgFile.name;
+      bgCustomName.style.display = 'block';
+      $$('.bg-preset').forEach(b => b.classList.remove('active'));
+      bgPresets.querySelector('[data-bg="custom"]').classList.add('active');
+    }
+  });
+
+  async function handleFile(file){
+    const formData = new FormData();
+    formData.append('video', file);
+
+    dropZone.innerHTML = '<div class="upload-text" style="padding:20px">Uploading...</div>';
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+
+      jobId = data.job_id;
+      const info = data.info;
+
+      // Show preview
+      const url = URL.createObjectURL(file);
+      previewVideo.src = url;
+      previewArea.style.display = 'block';
+      dropZone.style.display = 'none';
+
+      $('#file-name').textContent = file.name;
+      $('#file-resolution').textContent = info.width + 'x' + info.height;
+      $('#file-fps').textContent = info.fps + ' fps';
+      $('#file-frames').textContent = info.frames + ' frames';
+
+      // Show settings
+      stepSettings.classList.remove('hidden');
+    } catch(e){
+      showError(e.message);
+    }
+  }
+
+  // Remove button
+  $('#remove-btn').addEventListener('click', resetUpload);
+
+  function resetUpload(){
+    if(jobId){
+      fetch('/api/cleanup/' + jobId, { method: 'POST' });
+    }
+    jobId = null;
+    previewVideo.src = '';
+    previewArea.style.display = 'none';
+    dropZone.style.display = '';
+    dropZone.innerHTML = `
+      <span class="upload-icon">&#9651;</span>
+      <div class="upload-text">Drag & drop your video here</div>
+      <div class="upload-sub">or click to browse files</div>
+      <div class="upload-formats">
+        <span>MP4</span><span>MOV</span><span>AVI</span><span>MKV</span><span>WEBM</span>
+      </div>`;
+    fileInput.value = '';
+    stepSettings.classList.add('hidden');
+    stepProcessing.classList.add('hidden');
+    stepResult.classList.add('hidden');
+    stepError.classList.add('hidden');
+  }
+
+  // Process
+  processBtn.addEventListener('click', startProcessing);
+
+  async function startProcessing(){
+    if(!jobId) return;
+    processBtn.disabled = true;
+    processBtn.innerHTML = '<span>&#8987; Processing...</span>';
+    stepProcessing.classList.remove('hidden');
+    progressBar.style.width = '0%';
+    progressMessage.textContent = 'Starting...';
+    progressPercent.textContent = '0%';
+
+    const body = {
+      job_id: jobId,
+      model: modelSelect.value,
+      bg: selectedBg,
+      skip_frames: parseInt($('#skip-frames').value),
+      erode: parseInt($('#erode').value),
+      feather: parseInt($('#feather').value),
+      transparent: $('#transparent').checked,
+      no_alpha_matting: !$('#alpha-matting').checked,
+    };
+
+    // Upload custom bg image first if needed
+    if(bgFile){
+      const fd = new FormData();
+      fd.append('bg_image', bgFile);
+      const bgRes = await fetch('/api/upload-bg', { method: 'POST', body: fd });
+      const bgData = await bgRes.json();
+      if(bgData.error) throw new Error(bgData.error);
+      body.bg = bgData.path;
+    }
+
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+
+      // Stream progress via SSE
+      const evtSource = new EventSource('/api/stream/' + jobId);
+      evtSource.onmessage = function(ev){
+        const d = JSON.parse(ev.data);
+        progressMessage.textContent = d.message || 'Processing...';
+        if(d.status === 'done'){
+          evtSource.close();
+          progressBar.style.width = '100%';
+          progressPercent.textContent = '100%';
+          setTimeout(showResult, 600);
+        } else if(d.status === 'error'){
+          evtSource.close();
+          showError(d.message);
+        } else {
+          // Animate progress
+          const pct = estimateProgress(d);
+          progressBar.style.width = pct + '%';
+          progressPercent.textContent = Math.round(pct) + '%';
+        }
+      };
+      evtSource.onerror = function(){
+        evtSource.close();
+        // Poll as fallback
+        pollProgress();
+      };
+    } catch(e){
+      showError(e.message);
+    }
+  }
+
+  function estimateProgress(d){
+    // Since the backend doesn't provide real frame progress,
+    // we fake an indeterminate-ish progress that slows down
+    if(d.status === 'processing') return Math.min(95, parseFloat(progressBar.style.width || 0) + 2);
+    if(d.status === 'done') return 100;
+    return 0;
+  }
+
+  async function pollProgress(){
+    if(!jobId) return;
+    try {
+      const res = await fetch('/api/progress/' + jobId);
+      const d = await res.json();
+      if(d.status === 'done'){
+        progressBar.style.width = '100%';
+        progressPercent.textContent = '100%';
+        setTimeout(showResult, 600);
+      } else if(d.status === 'error'){
+        showError(d.message);
+      } else {
+        const pct = estimateProgress(d);
+        progressBar.style.width = pct + '%';
+        progressPercent.textContent = Math.round(pct) + '%';
+        progressMessage.textContent = d.message || 'Processing...';
+        setTimeout(pollProgress, 1000);
+      }
+    } catch(e){
+      setTimeout(pollProgress, 2000);
+    }
+  }
+
+  function showResult(){
+    stepProcessing.classList.add('hidden');
+    stepResult.classList.remove('hidden');
+    $('#download-btn').href = '/api/download/' + jobId;
+  }
+
+  function showError(msg){
+    stepProcessing.classList.add('hidden');
+    stepSettings.classList.add('hidden');
+    stepError.classList.remove('hidden');
+    $('#error-message').textContent = msg || 'Something went wrong.';
+  }
+
+  // New / Retry
+  $('#new-btn').addEventListener('click', () => { resetUpload(); window.scrollTo(0,0); });
+  $('#retry-btn').addEventListener('click', () => { resetUpload(); window.scrollTo(0,0); });
+})();
+</script>
+
+</body>
+</html>
